@@ -1,8 +1,7 @@
 pipeline {
-    agent any
-
-    kubernetes {
-        yaml '''
+    agent {
+        kubernetes {
+            yaml '''
 apiVersion: v1
 kind: Pod
 spec:
@@ -10,23 +9,25 @@ spec:
         - name: gitleaks
           image: zricethezav/gitleaks:latest
           command:
-        - sleep
-        args:
-        - 99d
+          - sleep
+          args:
+          - 99d
+        - name: maven
+          image: maven:3.8-openjdk-17
+          command:
+          - sleep
+          args:
+          - 99d
 '''
-    }
-
-    tools {
-        maven 'maven3'
+        }
     }
 
     environment {
         APP_NAME = 'WebGoat'
         SONARQUBE_SERVER = 'sonarqube'
-        BUILD_TIMESTAMP = sh(script: "date '+%Y-%m-%d_%H-%M-%S'",returnStdout:true).trim()
+        BUILD_TIMESTAMP = sh(script: "date '+%Y-%m-%d_%H-%M-%S'", returnStdout: true).trim()
     }
 
-    //STAGES
     stages {
 
         stage('Checkout') {
@@ -36,12 +37,12 @@ spec:
                 echo "Build: ${env.BUILD_NUMBER}"
 
                 sh '''
-                                echo "Working on Directory: $(pwd)"
-                                echo "Git Status"
-                                git status
-                                echo "Git Log (last commit)"
-                                git log -1
-                                '''
+                    echo "Working on Directory: $(pwd)"
+                    echo "Git Status"
+                    git status
+                    echo "Git Log (last commit)"
+                    git log -1
+                '''
             }
         }
 
@@ -74,55 +75,63 @@ spec:
 
         stage('Build') {
             steps {
-                echo 'Stage: Building Application'
-                sh '''
-                                mvn clean package -DskipTests
-                                '''
-                echo 'Build completed'
+                container('maven') {
+                    echo 'Stage: Building Application'
+                    sh '''
+                        mvn clean package -DskipTests
+                    '''
+                    echo 'Build completed'
+                }
             }
         }
 
         stage('Unit Test') {
             steps {
-                echo 'Stage: Running Unit Test'
-                sh '''
-                            mvn test
-                            '''
-                echo 'Unit test passed'
+                container('maven') {
+                    echo 'Stage: Running Unit Test'
+                    sh '''
+                        mvn test
+                    '''
+                    echo 'Unit test passed'
+                }
             }
             post {
                 always {
                     junit '**/target/surefire-reports/*.xml'
                 }
             }
-
         }
-        stage('Parallel Scans') {
 
+        stage('Parallel Scans') {
             parallel {
                 stage('SCA - Dependency Check') {
                     steps {
-                        echo "Parallel Stage: SCA"
+                        container('maven') {
+                            echo "Parallel Stage: SCA"
 
-                        dependencyCheck additionalArguments: '--scan ./ --format HTML --format XML', odcInstallation: 'OWASP SCA'
-                        dependencyCheckPublisher pattern: 'dependency-check-report.xml'
+                            dependencyCheck additionalArguments: '--scan ./ --format HTML --format XML', odcInstallation: 'OWASP SCA'
+                            dependencyCheckPublisher pattern: 'dependency-check-report.xml'
+                        }
                     }
                 }
+
                 stage('SAST - SonarQube') {
                     steps {
-                        echo "Parallel Stage: SAST"
+                        container('maven') {
+                            echo "Parallel Stage: SAST"
 
-                        script {
-                            withSonarQubeEnv("${SONARQUBE_SERVER}") {
-                                sh '''
-                                                        mvn sonar:sonar \
-                                                        -Dsonar.projectKey=${APP_NAME} \
-                                                        -Dsonar.projectName=${APP_NAME} \
-                                                        -Dsonar.javabinaries=target/classes
-                                                        '''
+                            script {
+                                withSonarQubeEnv("${SONARQUBE_SERVER}") {
+                                    sh '''
+                                        mvn sonar:sonar \
+                                        -Dsonar.projectKey=${APP_NAME} \
+                                        -Dsonar.projectName=${APP_NAME} \
+                                        -Dsonar.java.binaries=target/classes
+                                    '''
+                                }
+
+                                echo "SAST scan completed"
                             }
-
-                            echo "SAST scan completed"
                         }
                     }
                 }
@@ -146,37 +155,37 @@ spec:
         }
 
         stage('Package') {
-                steps {
-                        echo "Stage: Package Application"
-                        sh '''
-                        echo "Packagin WebGoat Jar...."
+            steps {
+                container('maven') {
+                    echo "Stage: Package Application"
+                    sh '''
+                        echo "Packaging WebGoat Jar...."
                         ls -lh target/*.jar
-                        '''
-                        archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
-                        echo "Package completed"
+                    '''
+                    archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+                    echo "Package completed"
                 }
+            }
         }
 
         stage('Deploy to Dev') {
-                steps {
-                        echo "Stage: Deploy to Development Enviorment"
-                        //Not doing anything just wanted to have this one to look good in the Jenkins job.script
-
-                }
+            steps {
+                echo "Stage: Deploy to Development Environment"
+                // Not doing anything just wanted to have this one to look good in the Jenkins job
+            }
         }
+    }
 
-        post {
-                always {
-                        echo "pipeline completed"
-                        cleanWs()
-                }
-                success {
-                        echo "Pipeline completed succesfully."
-
-                }
-                failure {
-                        echo "Pipeline Failed"
-                }
+    post {
+        always {
+            echo "Pipeline completed"
+            cleanWs()
+        }
+        success {
+            echo "Pipeline completed successfully."
+        }
+        failure {
+            echo "Pipeline Failed"
         }
     }
 }
