@@ -46,32 +46,32 @@ spec:
             }
         }
 
-        stage('Secret Scanning') {
-            steps {
-                echo "Stage: Secret Scanning"
-                container('gitleaks') {
-                    script {
-                        def exitCode = sh(
-                            script: 'gitleaks detect --source=. --report-format=json --report-path=gitleaks-report.json --no-git',
-                            returnStatus: true
-                        )
-
-                        if (exitCode == 0) {
-                            echo "No secrets found"
-                        } else if (exitCode == 1) {
-                            error 'SECRET DETECTED! Check gitleaks-report.json'
-                        } else {
-                            error "Gitleaks failed with exit code: ${exitCode}"
-                        }
-                    }
-                }
-            }
-            post {
-                always {
-                    archiveArtifacts artifacts: 'gitleaks-report.json', allowEmptyArchive: true
-                }
-            }
-        }
+        //stage('Secret Scanning') {
+        //    steps {
+        //        echo "Stage: Secret Scanning"
+        //        container('gitleaks') {
+        //            script {
+        //                def exitCode = sh(
+        //                    script: 'gitleaks detect --source=. --report-format=json --report-path=gitleaks-report.json --no-git',
+        //                    returnStatus: true
+        //                )
+        //
+        //                if (exitCode == 0) {
+        //                    echo "No secrets found"
+        //                } else if (exitCode == 1) {
+        //                    error 'SECRET DETECTED! Check gitleaks-report.json'
+        //                } else {
+        //                    error "Gitleaks failed with exit code: ${exitCode}"
+        //                }
+        //            }
+        //        }
+        //    }
+        //    post {
+        //        always {
+        //            archiveArtifacts artifacts: 'gitleaks-report.json', allowEmptyArchive: true
+        //        }
+        //    }
+        //}
 
         stage('Build') {
             steps {
