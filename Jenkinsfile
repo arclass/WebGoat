@@ -13,7 +13,7 @@ spec:
           args:
           - 99d
         - name: maven
-          image: maven:3.8-openjdk-17
+          image: maven:3.9-eclipse-temurin-21
           command:
           - sleep
           args:
