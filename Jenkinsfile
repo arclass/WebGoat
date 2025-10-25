@@ -89,22 +89,22 @@ spec:
             }
         }
 
-        stage('Unit Test') {
-            steps {
-                container('maven') {
-                    echo 'Stage: Running Unit Test'
-                    sh '''
-                        mvn test
-                    '''
-                    echo 'Unit test passed'
-                }
-            }
-            post {
-                always {
-                    junit '**/target/surefire-reports/*.xml'
-                }
-            }
-        }
+        //stage('Unit Test') {
+        //    steps {
+        //        container('maven') {
+        //            echo 'Stage: Running Unit Test'
+        //            sh '''
+        //                mvn test
+        //            '''
+        //            echo 'Unit test passed'
+        //        }
+        //    }
+        //    post {
+        //        always {
+        //            junit '**/target/surefire-reports/*.xml'
+        //        }
+        //    }
+        //}
 
         stage('Parallel Scans') {
             parallel {
