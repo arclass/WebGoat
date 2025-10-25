@@ -77,9 +77,13 @@ spec:
             steps {
                 container('maven') {
                     echo 'Stage: Building Application'
-                    sh '''
-                        mvn clean package -DskipTests
-                    '''
+                    //sh '''
+                    //    mvn clean package -DskipTests
+                    //'''
+                      //Trying to fix issue what will not allow the build to continue.
+                      sh '''
+                          mvn clean package -DskipTests -Dmaven.compiler.release=21
+                      '''
                     echo 'Build completed'
                 }
             }
